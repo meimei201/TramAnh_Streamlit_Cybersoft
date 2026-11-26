@@ -8,3 +8,8 @@ st.set_page_config(
 
 
 st.title("Ask your CSV")
+
+#Sidebar for file upload
+with st.sidebar:
+    st.header('Data upload')
+    uploaded_file=st.file_uploader('Upload a CSV file', type=['csv'])
