@@ -36,6 +36,15 @@ with st.sidebar:
             st.session_state.df = df
             st.success(f"Loaded {df.shape[0]} rows x {df.shape[1]} columns")
 
+            #Create data summary for token optimization
+            st.session_state.data_summary={
+                "shapes": df.shape,
+                "columns": df.columns.tolist(),
+                "dtypes": df.dtypes.to_dict(),
+                "samples":df.head(3).to_dict(),
+                "stats": df.describe().to_dict() if not df.empty else {}
+            }
+
             #Data Preview
             with st.expander("Preview data"):
                 st.dataframe(df.head())
@@ -75,6 +84,74 @@ if st.session_state.df is not None:
         #Display user message
         with st.chat_message('user'):
             st.markdown(user_input)
+
+        #Prepare data context with token optimazation
+        df=st.session_state.df #Gan nguoc lai df cua session vao bien df
+        if len(df)>100:
+            data_context= f""""
+            Dataset Shape: {st.session_state.data_summary['shapes']},
+            Columns: {' , '.join(st.session_state.data_summary['columns'])}
+            Data types: {st.session_state.data_summary['dtypes']}
+            Samples: {st.session_state.data_summary['samples']}
+            Basic statistics: {st.session_state.data_summary['stats']}         
+            """
+
+        else:
+            data_context = f""""
+            Full dataset:
+            {df.to_string()} 
+            """
+
+
+        #System Prompt
+        system_prompt = f"""
+        You are a helpful data analyst assistant.
+        The user has uploaded a CSV file with the following information:
+        {data_context} 
+
+        The data is loaded in a Pandas Dataframe called `df`.
+
+        Guidelines:
+        - Answer the user's question clearly and concisely
+        - If the question requires analysis, write python code using pandas ,matplotlib, or seaborn
+        - For visualizarion always use plt.figure() before plotting and include plt.tight_layout()
+        - Always validate data before operations (check for nulls,data types, etc..)
+        - If you can't answer due to data limitations, explain why
+        - Keep responsing focused on the data and questions asked
+        - Summarize your findings, insights, and any relevant statistics or visual trends.
+        - Focus on delivering the results and what they mean, not on how to get them.
+        - If a chart or visualization would help, display the chart in the response using matplotlib or seaborn.
+        - If a user asks for a specific visualization, display the chart in the response using matplotlib or seaborn.
+
+        When writing code:
+        - Import statements are already done (pandas as pd, matplotlib.pylot as plt, seaborn as sns)
+        - The dataframe is available as 'df'
+        - For plots, use plt.figure(figsize=(10,6)) for better display.
+        - Always add titles and lables to plots
+        """
+
+        #Generate response
+        with st.chat_message("assistant"):
+            with st.spinner('Analyzing your data'):
+                try:
+                    response = client.chat.completions.create(
+                        model= 'gpt-6-luna',
+                        messages=[
+                            {'role':'system','content':system_prompt},
+                            {'role':'assistant','content':user_input}
+                        ],
+                        max_completion_tokens= 1500 #Ket qua duoi 1500 tu
+                    )
+                    reply=response.choices[0].message.content
+                    st.markdown(reply)
+
+                    #Save assistant response to history
+                    st.session_state.messages.append({'role':'assistant','content':reply})
+
+                except Exception as e:
+                    st.error(f"Error generating response: {st(e)}")
+                    st.info("Please try again or rephrase your question")
+
 
     else:
         #No data upload state:
