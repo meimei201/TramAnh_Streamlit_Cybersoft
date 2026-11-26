@@ -1,11 +1,16 @@
 import streamlit as st
 import pandas as pd
+import openai
 
 st.set_page_config(
     page_title= 'Ask your CSV',
     page_icon= '📊',
     layout='wide'
 )
+
+#Initialize OpenAi Clients
+client=openai.OpenAI(api_key=st.secrets['OPENAI_API_KEY'])
+
 
 #Session state initialization
 if 'messages' not in st.session_state:
@@ -28,6 +33,7 @@ with st.sidebar:
     if uploaded_file:
         try:
             df=pd.read_csv(uploaded_file)
+            st.session_state.df = df
             st.success(f"Loaded {df.shape[0]} rows x {df.shape[1]} columns")
 
             #Data Preview
@@ -66,3 +72,21 @@ if st.session_state.df is not None:
     if user_input:
         #Add user's messages to history
         st.session_state.messages.append({'role':'user','content':user_input})
+        #Display user message
+        with st.chat_message('user'):
+            st.markdown(user_input)
+
+    else:
+        #No data upload state:
+        col1,col2,col3 = st.columns([1,2,1])
+        with col2: 
+            st.info('Please upload a csv file to start')
+            #Example questions
+            st.markdown('### Example questions you can ask: ')
+            st.markdown("""
+            - What are the main trends in my data?
+            - Show me a correlation matrix 
+            - Create a bar chart of the top 10 catergories
+            - What's the average value by month ?
+            - Are there any outliners in the price column?
+            """)
