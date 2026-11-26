@@ -7,6 +7,15 @@ st.set_page_config(
     layout='wide'
 )
 
+#Session state initialization
+if 'messages' not in st.session_state:
+    st.session_state.messages=[]
+if 'df' not in st.session_state:
+    st.session_state.df=None
+if'data_summary' not in st.session_state:
+    st.session_state.data_summary=None
+
+
 
 st.title("Ask your CSV")
 st.markdown("Upload your data and ask question in plain English ")
@@ -42,3 +51,18 @@ with st.sidebar:
 
     else:
         st.info("Upload a CSV to start analyzing")
+
+
+#Main chat interface
+if st.session_state.df is not None:
+    #Display chat history
+    for msg in st.session_state.messages:
+        with st.chat_message(msg['role']):
+            st.markdown(msg['content'])
+
+    #Chat input
+    user_input=st.chat_input("Ask a question about your data")
+
+    if user_input:
+        #Add user's messages to history
+        st.session_state.messages.append({'role':'user','content':user_input})
